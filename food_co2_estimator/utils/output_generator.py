@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 from food_co2_estimator.language.detector import Languages
@@ -16,7 +17,6 @@ from food_co2_estimator.output_parsers.weight_estimator import WeightEstimates
 MIN_DINNER_EMISSION_PER_CAPITA = 1.3
 MAX_DINNER_EMISSION_PER_CAPITA = 2.2
 
-
 def generate_output(
     weight_estimates: WeightEstimates,
     co2_emissions: CO2Emissions,
@@ -24,6 +24,7 @@ def generate_output(
     negligeble_threshold: float,
     number_of_persons: int | None,
     language: Languages = Languages.English,
+    recipe_url: str = ""  # Add the URL as an input if you have it available
 ) -> str:
     translations = {
         Languages.English: {
@@ -60,7 +61,7 @@ def generate_output(
 
     trans = translations.get(language, translations[Languages.English])
 
-    ingredients_output = []
+    ingredient_data = []
     total_co2 = 0
     all_comments = []
 
@@ -93,66 +94,70 @@ def generate_output(
         )
 
         if weight_estimate.weight_in_kg is None:
-            ingredients_output.append(
-                f"{weight_estimate.ingredient}: {trans['unable']}"
-            )
+            ingredient_data.append({
+                "name": weight_estimate.ingredient,
+                "weight_kg": None,
+                "co2_kg": None,
+                "status": trans['unable'],
+                "method": None
+            })
             continue
 
         if weight_estimate.weight_in_kg <= negligeble_threshold:
-            ingredients_output.append(
-                f"{weight_estimate.ingredient}: {trans['negligible'].format(round(weight_estimate.weight_in_kg,3))}"
-            )
+            ingredient_data.append({
+                "name": weight_estimate.ingredient,
+                "weight_kg": weight_estimate.weight_in_kg,
+                "co2_kg": 0,
+                "status": trans['negligible'].format(round(weight_estimate.weight_in_kg,3)),
+                "method": None
+            })
             continue
 
         if co2_data and co2_data.co2_per_kg:
             co2_value = round(co2_data.co2_per_kg * weight_estimate.weight_in_kg, 2)
-            ingredients_output.append(
-                f"{weight_estimate.ingredient}: {round(weight_estimate.weight_in_kg, 2)} kg * {round(co2_data.co2_per_kg, 2)} kg CO2e / kg (DB) = {co2_value} kg CO2e"
-            )
             total_co2 += co2_value
-
+            ingredient_data.append({
+                "name": weight_estimate.ingredient,
+                "weight_kg": round(weight_estimate.weight_in_kg, 2),
+                "co2_kg": co2_value,
+                "status": "OK",
+                "method": "DB"
+            })
         elif search_result and search_result.result:
             co2_value = round(search_result.result * weight_estimate.weight_in_kg, 2)
-            ingredients_output.append(
-                f"{weight_estimate.ingredient}: {round(weight_estimate.weight_in_kg, 2)} kg * {round(search_result.result, 2)} kg CO2e / kg (Search) = {co2_value} kg CO2e"
-            )
             total_co2 += co2_value
-
+            ingredient_data.append({
+                "name": weight_estimate.ingredient,
+                "weight_kg": round(weight_estimate.weight_in_kg, 2),
+                "co2_kg": co2_value,
+                "status": "OK",
+                "method": "Search"
+            })
         else:
-            ingredients_output.append(
-                f"{weight_estimate.ingredient}: {trans['not_found']}"
-            )
-    if number_of_persons is not None:
-        number_of_persons_text = f"\n{trans['persons']}: {number_of_persons}"
-        emission_per_person_text = f"\n{trans['emission_pr_person']}: {round(total_co2/number_of_persons,1)} kg CO2e / pr. person"
+            ingredient_data.append({
+                "name": weight_estimate.ingredient,
+                "weight_kg": round(weight_estimate.weight_in_kg, 2),
+                "co2_kg": None,
+                "status": trans['not_found'],
+                "method": None
+            })
+
+    if number_of_persons is not None and number_of_persons > 0:
+        co2_per_person = round(total_co2 / number_of_persons, 1)
     else:
-        number_of_persons_text = ""
-        emission_per_person_text = ""
+        co2_per_person = None
 
-    output = (
-        "----------------------------------------"
-        f"\n{trans['total']}: {round(total_co2,1)} kg CO2e"
-        f"{number_of_persons_text}"
-        f"{emission_per_person_text}"
-        f"\n{trans['avg_meal_emission_pr_person']}: {MIN_DINNER_EMISSION_PER_CAPITA} - {MAX_DINNER_EMISSION_PER_CAPITA} kg CO2e / pr. person"
-        "\n----------------------------------------"
-        f"\n{trans['method']}: X kg * Y kg CO2e / kg = Z kg CO2e"
-    )
-    output += "\n" + "\n".join(ingredients_output)
-    output += "\n----------------------------------------"
+    result_dict = {
+        "recipe_url": recipe_url,
+        "total_co2_kg": round(total_co2, 1),
+        "number_of_persons": number_of_persons,
+        "co2_per_person_kg": co2_per_person,
+        "avg_meal_emission_per_person_range_kg": [MIN_DINNER_EMISSION_PER_CAPITA, MAX_DINNER_EMISSION_PER_CAPITA],
+        "ingredients": ingredient_data,
+        "comments": all_comments
+    }
 
-    # Legends
-    output += f"\n\n{trans['legends']}:"
-    output += f"\n{trans['db']}"
-    output += f"\n{trans['search']}"
-
-    # Append comments
-    output += f"\n\n{trans['comments']}:"
-    for comment in all_comments:
-        ingredient = comment["ingredient"]
-        output += f"\n{trans['for']} {ingredient}:"
-        for key, value in comment["comments"].items():
-            if value:
-                output += f"\n- {key}: {value}"
-
-    return output
+    # Convert dict to JSON string
+    json_output = json.dumps(result_dict, ensure_ascii=False, indent=2)
+    print(json_output)
+    return json_output

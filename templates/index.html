@@ -1,188 +1,39 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Recipe CO2 Emission Calculator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="stylesheet"
-      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
-    />
-    <style>
-      body {
-        background-color: rgba(211, 255, 211, 0.3);
-      }
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recipe CO2 Emission Calculator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="top-bar">
+    <label for="urlInput">Enter recipe URL or ingredients manually:</label>
+    <textarea id="urlInput" name="urlInput" rows="1"></textarea>
+    <button id="calculateButton">Calculate CO2e Emission</button>
+    <div id="statusDiv"></div>
+  </div>
 
-      #resultDiv {
-        border: 2px solid darkgreen;
-        background-color: #f8f8f8;
-        padding: 10px;
-        margin-top: 10px;
-        min-height: 300px;
-        white-space: pre-wrap;
-        border-radius: 0px;
-      }
-
-      #calculateButton {
-        background-color: darkgreen;
-        border-color: darkgreen;
-        border-radius: 0px;
-      }
-
-      #calculateButton:hover {
-        background-color: #006400;
-      }
-
-      #urlInput {
-        border: 2px solid darkgreen;
-        border-radius: 0px;
-      }
-    </style>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", (event) => {
-        const calculateButton = document.getElementById("calculateButton");
-        calculateButton.addEventListener("click", calculateCO2);
-      });
-
-      const funFacts = [
-        "approximately one-third of all food produced worldwide goes to waste, often due to being perceived as 'unattractive'. By choosing and consuming 'ugly' fruits and vegetables, we can contribute to reducing food waste.",
-        "certain insects such as crickets, mealworms, and locusts are packed with protein, vitamins, and minerals. They require considerably less land, water, and feed compared to conventional livestock, making them an eco-friendly food source.",
-        "plant-based burgers can generate around 90% fewer greenhouse gas emissions and consume 46% less energy than beef burgers.",
-        "used coffee grounds have multiple purposes, such as a natural fertilizer, bug repellent, and even a skin exfoliant, showcasing a sustainable approach to reusing waste.",
-        "grains like quinoa, amaranth, and millet thrive in drought conditions and are packed with nutrients. These qualities make them excellent choices in areas facing water scarcity.",
-        "regenerative agriculture emphasizes soil health restoration, biodiversity enhancement, and ecosystem improvement. Remarkably, it can sequester more carbon dioxide than it releases, contributing to the fight against climate change.",
-        "vertical farming is an innovative method of growing crops in layered arrangements, often indoors. This technique can minimize the use of pesticides, conserve space, and provide urban regions with fresh produce.",
-        "the peril of overfishing threatens our marine ecosystems. Thankfully, there are guidelines available for consumers to help them choose seafood that's been harvested sustainably.",
-        "mycelium, which forms the underground network for mushrooms, is being utilized to produce sustainable packaging materials. These are biodegradable, compostable, and a great alternative to plastic.",
-        "chocolate, in its raw form, was once used as a form of currency by the ancient Mayans and Aztecs.",
-        "the fermentation process involved in producing beer releases CO2, and some breweries are now capturing and reusing that CO2 for various purposes.",
-        "while onions are known for making people cry, they can also be used to absorb smells, and placing an onion half in your basement can improve air quality.",
-        "greenhouse gas emissions from the dairy sector represent approximately 3% of total global emissions.",
-        "broccoli contains more protein per calorie than steak, although you would need to eat a lot more broccoli to get the same amount of protein.",
-        "wombat poop is cube-shaped, which helps prevent it from rolling away and marks its territory.",
-        "a group of flamingos is called a 'flamboyance'.",
-        "honeybees can recognize human faces.",
-      ];
-      let currentFactIndex = 0;
-
-      function hash_input(input_data) {
-        return CryptoJS.MD5(input_data).toString();
-      }
-
-      async function calculateCO2() {
-        const calculateButton = document.getElementById("calculateButton");
-        calculateButton.disabled = true;
-        const urlInput = document.getElementById("urlInput");
-        const resultDiv = document.getElementById("resultDiv");
-        const input_data = urlInput.value;
-
-        resultDiv.innerHTML =
-          "Calculating CO2 Emission (will take a minute or two) ...";
-
-        const funFactInterval = setInterval(() => {
-          currentFactIndex = Math.floor(Math.random() * funFacts.length);
-          resultDiv.innerHTML = `Still working on it ... BUT did you know that ${funFacts[currentFactIndex]}`;
-        }, 15000);
-
-        const maxProcessingTime = 180000;
-
-        const timeoutID = setTimeout(() => {
-          clearInterval(funFactInterval);
-          resultDiv.textContent =
-            "Something went wrong :-( - ChatGPT is slow at the moment";
-          calculateButton.disabled = false;
-        }, maxProcessingTime);
-
-        try {
-          const response = await fetch(
-            `/calculate?input_data=${encodeURIComponent(input_data)}`
-          );
-          if (response.status === 202) {
-            const data = await response.json();
-            const inputHash = data.hashed_input;
-            pollForResult(inputHash, resultDiv, funFactInterval, timeoutID);
-          } else {
-            clearTimeout(timeoutID);
-            resultDiv.textContent = "Error starting estimation";
-            calculateButton.disabled = false;
-          }
-        } catch (error) {
-          clearTimeout(timeoutID);
-          resultDiv.textContent = `An error occurred: ${error.message}`;
-          calculateButton.disabled = false;
-        }
-      }
-
-      async function pollForResult(
-        inputHash,
-        resultDiv,
-        funFactInterval,
-        timeoutID
-      ) {
-        try {
-          const response = await fetch(`/results/${inputHash}`);
-          const data = await response.json();
-          if (response.status === 202 && data.status === "Processing") {
-            setTimeout(() => {
-              pollForResult(inputHash, resultDiv, funFactInterval, timeoutID);
-            }, 2000);
-          } else {
-            clearTimeout(timeoutID);
-            clearInterval(funFactInterval);
-            resultDiv.textContent = data.result;
-            calculateButton.disabled = false;
-          }
-        } catch (error) {
-          clearTimeout(timeoutID);
-          clearInterval(funFactInterval);
-          resultDiv.textContent = `An error occurred: ${error.message}`;
-          calculateButton.disabled = false;
-        }
-      }
-
-      document.addEventListener("input", function (event) {
-        if (event.target.tagName.toLowerCase() === "textarea") {
-          autoExpand(event.target);
-        }
-      });
-
-      function autoExpand(textarea) {
-        textarea.style.height = "auto";
-        textarea.style.height = textarea.scrollHeight + "px";
-      }
-    </script>
-  </head>
-  <body>
-    <div class="container mt-5">
-      <div class="row">
-        <div class="col-md-6 offset-md-3">
-          <h1 class="text-center mb-4">Recipe CO2e Emission Calculator</h1>
-          <form>
-            <div class="form-group">
-              <label for="urlInput"
-                >Enter recipe URL or the ingredients manually:</label
-              >
-              <textarea
-                class="form-control"
-                id="urlInput"
-                name="urlInput"
-                rows="3"
-              ></textarea>
-            </div>
-            <button
-              type="button"
-              id="calculateButton"
-              class="btn btn-primary btn-block"
-            >
-              Calculate CO2e Emission
-            </button>
-          </form>
-          <div id="resultDiv" class="mt-4"></div>
-        </div>
+  <div class="container">
+    <div class="left-pane">
+      <!-- Left side: iframe to show the recipe URL -->
+      <iframe id="recipeFrame" src="" frameborder="0"></iframe>
+    </div>
+    <div class="right-pane">
+      <div class="top-pane">
+        <h2>Summary</h2>
+        <p>Total CO2: <span id="totalCO2"></span> kg</p>
+        <p>Number of Persons: <span id="numberOfPersons"></span></p>
+        <p>CO2 per Person: <span id="co2PerPerson"></span> kg</p>
+        <p>Avg. Danish Dinner Emission per Person: <span id="avgRange"></span> kg</p>
+      </div>
+      <div class="bottom-pane">
+        <h3>Ingredients</h3>
+        <div class="ingredient-grid" id="ingredientCards"></div>
       </div>
     </div>
-  </body>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
 </html>

@@ -1,5 +1,6 @@
 {
   "python.envFile": "${workspaceFolder}/.env",
+  "python.defaultInterpreterPath":"${workspaceFolder}/.venv",
   "[python]": {
     "diffEditor.ignoreTrimWhitespace": false,
     "gitlens.codeLens.symbolScopes": ["!Module"],

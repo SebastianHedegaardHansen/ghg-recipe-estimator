@@ -1,0 +1,97 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: rgba(211, 255, 211, 0.3);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: #f0f0f0;
+  gap: 10px;
+}
+
+#urlInput {
+  width: 300px;
+  border: 2px solid darkgreen;
+  border-radius: 0;
+  resize: none;
+}
+
+#calculateButton {
+  background-color: darkgreen;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#calculateButton:hover {
+  background-color: #006400;
+}
+
+#statusDiv {
+  margin-left: 20px;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Container for the two halves of the screen */
+.container {
+  display: flex;
+  width: 100vw;
+  height: calc(100vh - 50px); /* subtract top-bar height as needed */
+}
+
+.left-pane {
+  flex: 1;
+  border-right: 2px solid darkgreen;
+  overflow: hidden;
+}
+
+#recipeFrame {
+  width: 100%;
+  height: 100%;
+}
+
+.right-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f8f8;
+}
+
+.top-pane {
+  padding: 20px;
+  border-bottom: 2px solid darkgreen;
+}
+
+.bottom-pane {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.ingredient-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ingredient-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: calc(33% - 20px);
+  box-sizing: border-box;
+  text-align: center;
+  padding: 10px;
+}
+
+.ingredient-card img {
+  max-width: 100%;
+  height: auto;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}

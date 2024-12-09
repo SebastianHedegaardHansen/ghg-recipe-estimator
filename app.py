@@ -31,12 +31,12 @@ def run_in_thread(func, input_data):
 
 
 @app.route("/")
-async def index():
+def index():
     return render_template("index.html")
 
 
 @app.route("/calculate")
-async def calculate():
+def calculate():
     input_data = request.args.get("input_data")
     if not input_data:
         return jsonify(status="No input provided"), 400
@@ -51,9 +51,9 @@ async def calculate():
 
 
 @app.route("/results/<hashed_input>")
-async def get_results(hashed_input):
+def get_results(hashed_input):
     result = results.get(hashed_input, None)
-    if result:
+    if result is not None:
         return jsonify(status="Completed", result=result), 200
     else:
         return jsonify(status="Processing", input_data=hashed_input), 202
